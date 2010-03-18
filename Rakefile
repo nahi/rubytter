@@ -25,7 +25,7 @@ require 'spec/rake/spectask'
 Spec::Rake::SpecTask.new(:spec) do |spec|
   spec.libs << 'lib' << 'spec'
   spec.spec_files = FileList['spec/**/*_spec.rb']
-  spec.spec_opts = ['-c']
+  spec.spec_opts = ['-c', '-rubygems']
 end
 
 Spec::Rake::SpecTask.new(:rcov) do |spec|
