@@ -1,3 +1,5 @@
+require 'oauth'
+
 class Rubytter
   class OAuth
     def initialize(key, secret, ca_file = nil)

@@ -3,11 +3,13 @@ require 'json'
 require 'net/https'
 require 'cgi'
 
-require 'oauth'
 require 'rubytter/core_ext'
 require 'rubytter/connection'
-require 'rubytter/oauth'
-require 'rubytter/oauth_rubytter'
+begin
+  require 'rubytter/oauth'
+  require 'rubytter/oauth_rubytter'
+rescue LoadError
+end
 
 class Rubytter
   VERSION = File.read(File.join(File.dirname(__FILE__), '../VERSION')).strip
