@@ -274,13 +274,10 @@ class Rubytter
       end
 
       data.symbolize_keys!
+    when String
+      CGI.unescapeHTML(data) # ここで unescapeHTML すべきか悩むところではある
     else
-      case data
-      when String
-        CGI.unescapeHTML(data) # ここで unescapeHTML すべきか悩むところではある
-      else
-        data
-      end
+      data
     end
   end
 

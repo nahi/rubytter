@@ -226,38 +226,19 @@ class Rubytter
       }
     end
 
-    it 'should convert struct to hash with escape as HTML' do
-      pending
+    it 'should convert struct to symbolized hash' do
+      hash = {'e' => [{'a' => 1, 'b' => 2}, {'c' => 'd'}]}
+      struct = @rubytter.structize(hash)
+      struct.should == {:e => [{:a => 1, :b => 2}, {:c => 'd'}]}
+    end
+
+    it 'should convert struct to hash with HTML unescaping' do
+      warn('TODO: HTML unescaping in structize could be a design flaw according to implementation comment')
       hash = {
         :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
       }
       struct = @rubytter.structize(hash)
-      struct.to_hash(true).should == {"e"=>[{"a"=>1, "b"=>2}, {"c"=>"&quot;&lt;&gt;&amp;"}]}
-    end
-
-    it 'should convert struct to json' do
-      pending
-      hash = {
-        :a => 'a',
-        'b' => 1,
-        1 => 'a',
-        /regex/ => 'regex',
-        nil => nil,
-        :c => {:a => 1, :b => 2},
-        :d => {:a => {:a => 1, :b => 2}, :b => 1},
-        :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
-      }
-      struct = @rubytter.structize(hash)
-      struct.to_json.should == '{"a":"a","b":1,"c":{"a":1,"b":2},"d":{"a":{"a":1,"b":2},"b":1},"e":[{"a":1,"b":2},{"c":"\"<>&"}]}'
-    end
-
-    it 'should convert struct to json with escape as HTML' do
-      pending
-      hash = {
-        :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
-      }
-      struct = Rubytter.structize(hash)
-      struct.to_json(true).should == '{"e":[{"a":1,"b":2},{"c":"&quot;&lt;&gt;&amp;"}]}'
+      struct.should == {:e=>[{:a=>1, :b=>2}, {:c=>'"<>&'}]}
     end
 
     it 'should create same structs from same datas' do
