@@ -1,38 +1,87 @@
 # -*- coding: utf-8 -*-
+require 'httpclient'
+
 class Rubytter
   class Connection
-    attr_reader :protocol, :port, :proxy_uri, :enable_ssl
+    attr_reader :client
+    attr_reader :uri
 
     def initialize(options = {})
-      @proxy_host = options[:proxy_host]
-      @proxy_port = options[:proxy_port]
-      @proxy_user = options[:proxy_user_name]
-      @proxy_password = options[:proxy_password]
-      @proxy_uri = nil
-      @enable_ssl = options[:enable_ssl]
-
-      if @enable_ssl
-        @protocol = "https"
-        @port = 443
+      @uri = setup_uri(options).freeze
+      if @uri.scheme == 'https'
+        @non_ssl_uri = new_uri_scheme(@uri, 'http')
+        @non_ssl_uri.freeze
       else
-        @protocol = "http"
-        @port = 80
+        @non_ssl_uri = @uri
       end
+      @client = setup_client(options)
+    end
 
-      if @proxy_host
-        @http_class = Net::HTTP::Proxy(@proxy_host, @proxy_port,
-                                       @proxy_user, @proxy_password)
-        @proxy_uri =  "#{@protocol}://" + @proxy_host + ":" + @proxy_port.to_s + "/"
-      else
-        @http_class = Net::HTTP
+    def request(method, path, query, body, extheader, opt = {})
+      path = '/' + path unless path[0] == ?/
+      uri = create_uri(path, opt)
+      @client.request(method, uri, query, body, extheader)
+    end
+    
+  private
+
+    def create_uri(path, options)
+      uri = options[:non_ssl] ? @non_ssl_uri : @uri
+      uri = uri.dup
+      uri.path = path
+      uri.host = options[:host] if options[:host]
+      uri
+    end
+
+    def setup_uri(options)
+      uri = new_uri
+      uri.host = options[:host] || 'twitter.com'
+      if options[:enable_ssl]
+        uri = new_uri_scheme(uri, 'https')
+      end
+      uri
+    end
+
+    def setup_client(options)
+      client = HTTPClient.new
+      client.agent_name = options[:agent_name] if options[:agent_name]
+      client.proxy = build_proxy_uri(options)
+      if options[:login] and options[:password]
+        uri = @uri.dup
+        client.set_auth(uri, options[:login], options[:password])
+        # uglish but we want to restrict domain to twitter.com and api.twitter.com
+        uri.host = 'api.twitter.com'
+        client.set_auth(uri, options[:login], options[:password])
+      end
+      client.debug_dev = Logger.new(options[:wiredump]) if options[:wiredump]
+      client
+    end
+
+    def build_proxy_uri(options)
+      if options[:proxy_host] and options[:proxy_port]
+        proty_uri = new_uri
+        proxy_uri.host = options[:proxy_host]
+        proxy_uri.port = options[:proxy_port]
+        if options[:proxy_user_name]
+          proxy_uri.user = options[:proxy_user_name]
+          if options[:proxy_password]
+            proxy_uri.password = options[:proxy_password]
+          end
+        end
+        proxy_uri
+      elsif options[:proxy]
+        options[:proxy]
       end
     end
 
-    def start(host, port = nil, &block)
-      http = @http_class.new(host, port || @port)
-      http.use_ssl = @enable_ssl
-      http.verify_mode = OpenSSL::SSL::VERIFY_NONE if http.use_ssl?
-      http.start(&block)
+    def new_uri
+      URI.parse('http://dummy/')
+    end
+
+    def new_uri_scheme(uri, scheme)
+      uri = uri.dup
+      uri.scheme = scheme
+      URI.parse(uri.to_s)
     end
   end
 end

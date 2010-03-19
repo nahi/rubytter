@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 require 'json'
-require 'net/https'
-require 'cgi'
-
+require 'httpclient'
+require 'cgi' # for unescapeHTML
 require 'rubytter/core_ext'
 require 'rubytter/connection'
 begin
@@ -24,20 +23,24 @@ class Rubytter
 
   attr_reader :login
   attr_accessor :host, :header
+  attr_reader :connection
 
   def initialize(login = nil, password = nil, options = {})
     @login = login
-    @password = password
-    setup(options)
+    @host = 'twitter.com'
+    @header = {}
+    setup(options.merge(:login => login, :password => password))
   end
 
   def setup(options)
-    @host = options[:host] || 'twitter.com'
-    @header = {'User-Agent' => "Rubytter/#{VERSION} (http://github.com/jugyo/rubytter)"}
+    options = options.dup
+    @login = options[:login] if options[:login]
+    @host = options[:host] if options[:host]
     @header.merge!(options[:header]) if options[:header]
     @app_name = options[:app_name]
+    options[:agent_name] ||= "Rubytter/#{VERSION} (http://github.com/jugyo/rubytter)"
+    options[:enable_ssl] = true unless options.key?(:enable_ssl)
     @connection = Connection.new(options)
-    @connection_for_search = Connection.new(options.merge({:enable_ssl => false}))
   end
 
   def self.api_settings
@@ -165,46 +168,38 @@ class Rubytter
 
   def get(path, params = {})
     path += '.json'
-    param_str = '?' + to_param_str(params)
-    path = path + param_str unless param_str.empty?
-    req = create_request(Net::HTTP::Get.new(path))
-    structize(http_request(@host, req))
+    res = @connection.request(:get, path, params, nil, @header)
+    structize(parse_response(res))
   end
 
   def post(path, params = {})
     path += '.json'
-    param_str = to_param_str(params)
-    req = create_request(Net::HTTP::Post.new(path))
-    structize(http_request(@host, req, param_str))
+    res = @connection.request(:post, path, nil, params, @header)
+    structize(parse_response(res))
   end
 
+  # ignore params. DELETE with params?
   def delete(path, params = {})
     path += '.json'
-    param_str = to_param_str(params)
-    req = create_request(Net::HTTP::Delete.new(path))
-    structize(http_request(@host, req, param_str))
+    res = @connection.request(:delete, path, nil, nil, @header)
+    structize(parse_response(res))
   end
 
   def search(query, params = {})
     path = '/search.json'
-    param_str = '?' + to_param_str(params.merge({:q => query}))
-    path = path + param_str unless param_str.empty?
-    req = create_request(Net::HTTP::Get.new(path), false)
-
-    json_data = http_request("search.#{@host}", req, nil, @connection_for_search)
-    structize(
-      json_data['results'].map do |result|
-        search_result_to_hash(result)
-      end
-    )
+    params = params.merge(:q => query)
+    res = @connection.request(:get, path, params, nil, @header, :host => "search.twitter.com", :non_ssl => true)
+    json_data = parse_response(res)
+    return {} unless json_data['results']
+    structize(json_data['results'].map { |result| search_result_to_hash(result) })
   end
 
   def search_user(query, params = {})
     path = '/1/users/search.json'
-    param_str = '?' + to_param_str(params.merge({:q => query}))
-    path = path + param_str unless param_str.empty?
-    req = create_request(Net::HTTP::Get.new(path))
-    structize(http_request("api.#{@host}", req))
+    params = params.merge(:q => query)
+    res = @connection.request(:get, path, params, nil, @header, :host => "api.twitter.com")
+    @connection.client.debug_dev = nil
+    structize(parse_response(res))
   end
 
   def search_result_to_hash(json)
@@ -225,28 +220,14 @@ class Rubytter
     }
   end
 
-  def http_request(host, req, param_str = nil, connection = nil)
-    connection ||= @connection
-    res = connection.start(host) do |http|
-      if param_str
-        http.request(req, param_str)
-      else
-        http.request(req)
-      end
-    end
-    json_data = JSON.parse(res.body)
-    case res.code
-    when "200"
+  def parse_response(res)
+    json_data = JSON.parse(res.content)
+    case res.status.to_i
+    when 200
       json_data
     else
       raise APIError.new(json_data['error'], res)
     end
-  end
-
-  def create_request(req, basic_auth = true)
-    @header.each {|k, v| req.add_field(k, v) }
-    req.basic_auth(@login, @password) if basic_auth
-    req
   end
 
   def structize(data)
@@ -279,10 +260,5 @@ class Rubytter
     else
       data
     end
-  end
-
-  def to_param_str(hash)
-    raise ArgumentError, 'Argument must be a Hash object' unless hash.is_a?(Hash)
-    hash.to_a.map{|i| i[0].to_s + '=' + CGI.escape(i[1].to_s) }.join('&')
   end
 end

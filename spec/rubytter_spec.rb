@@ -105,45 +105,37 @@ class Rubytter
     end
 
     it 'should respond to http_request' do
-      @rubytter.should_receive(:http_request) {|host, req, param_str| param_str.should == 'status=test'}
+      @rubytter.connection.should_receive(:request) do |method, path, query, body|
+        method.should == :post
+        body.should == {:status => 'test'}
+        DummyResponse.new
+      end
       @rubytter.update_status(:status => 'test')
     end
 
     it 'should respond to search (1)' do
-      @rubytter.should_receive(:http_request) do |host, req, param_str|
-        req.path.should == '/search.json?q=test'
-        host.should == 'search.twitter.com'
-        {'results' => []}
+      @rubytter.connection.should_receive(:request) do |method, path, query, body, header, opt|
+        path.should == '/search.json'
+        query.should == {:q => 'test'}
+        opt[:host].should == 'search.twitter.com'
+        opt[:non_ssl].should == true
+        DummyResponse.new
       end
       @rubytter.search('test')
     end
 
     it 'should respond to search with params (1)' do
-      @rubytter.should_receive(:http_request) do |host, req, param_str|
-        req.path.should =~ /\/search.json\?/
-        req.path.should =~ /q=test/
-        req.path.should =~ /lang=ja/
-        {'results' => []}
+      @rubytter.connection.should_receive(:request) do |method, path, query|
+        path.should == '/search.json'
+        query.should == {:q => 'test', :lang => 'ja'}
+        DummyResponse.new
       end
       @rubytter.search('test', :lang => 'ja')
     end
 
-    it 'should respond to to_param_str' do
-      param_str = @rubytter.to_param_str(:page => 2, :foo => 'bar')
-      param_str.should =~ /^.+?=.+?&.+?=.+?$/
-      param_str.should =~ /page=2/
-      param_str.should =~ /foo=bar/
-    end
-
-    it 'should raise when call to_param_str with invalid arg' do
-      lambda { @rubytter.to_param_str(nil) }.should raise_error(ArgumentError)
-      lambda { @rubytter.to_param_str('foo') }.should raise_error(ArgumentError)
-      lambda { @rubytter.to_param_str(:bar) }.should raise_error(ArgumentError)
-    end
-
     it 'should set default header' do
       rubytter = Rubytter.new('test', 'test')
-      rubytter.header.should == {'User-Agent', "Rubytter/#{VERSION} (http://github.com/jugyo/rubytter)"}
+      rubytter.connection.client.agent_name.should == "Rubytter/#{VERSION} (http://github.com/jugyo/rubytter)"
     end
 
     it 'should able to set custom header 1' do
@@ -155,7 +147,6 @@ class Rubytter
         }
       )
       rubytter.header['foo'].should == 'bar'
-      rubytter.header.has_key?('User-Agent').should == true
     end
 
     it 'should able to set custom header 2' do
@@ -278,9 +269,9 @@ class Rubytter
     end
 
     it 'should work search' do
-      json_data = JSON.parse open(File.dirname(__FILE__) + '/search.json').read
+      json_data = File.read(File.dirname(__FILE__) + '/search.json')
 
-      @rubytter.stub!(:http_request).and_return(json_data)
+      @rubytter.connection.stub!(:request).and_return(DummyResponse.new(200, json_data))
       statuses = @rubytter.search('termtter')
       status = statuses[0]
 
@@ -326,6 +317,16 @@ class Rubytter
       @rubytter.remove_member_from_list('foo', 'jugyo')
     end
 
+    it 'connection is SSL enabled by default' do
+      @rubytter.instance_eval{@connection.uri.scheme}.should == 'https'
+    end
+
+    it 'should work for user search' do
+      @rubytter.connection.should_receive(:request).
+        with(:get, '/1/users/search.json', {:q => 'jugyo'}, nil, anything, {:host => 'api.twitter.com'}).and_return(DummyResponse.new)
+      @rubytter.search_user('jugyo')
+    end
+
     # TODO: You should write more specs for Lists API...
 
     describe 'spec for ssl' do
@@ -334,16 +335,12 @@ class Rubytter
       end
 
       it 'connection is enabled ssl' do
-        @ssl_rubytter.instance_eval{@connection.enable_ssl}.should == true
+        @ssl_rubytter.instance_eval{@connection.uri.scheme}.should == 'https'
       end
 
-      it 'connection_for_search is not ever ssl' do
-        connection_for_search = @ssl_rubytter.instance_eval{@connection_for_search}
-        connection_for_search.enable_ssl.should == false
-
-        @ssl_rubytter.should_receive(:http_request).
-          with('search.twitter.com', anything, nil, connection_for_search).
-          and_return({'results' => []})
+      it 'search via non SSL even if SSL enabled' do
+        @ssl_rubytter.connection.should_receive(:request).
+          with(:get, '/search.json', {:q => 'rubytter'}, nil, anything, {:non_ssl => true, :host => 'search.twitter.com'}).and_return(DummyResponse.new)
         @ssl_rubytter.search('rubytter')
       end
     end
