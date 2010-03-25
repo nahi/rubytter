@@ -171,7 +171,7 @@ class Rubytter
         :d => {:a => {:a => 1, :b => 2}, :b => 1},
         :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
       }
-      struct = @rubytter.structize(hash)
+      struct = Rubytter.structize(hash)
       struct.a.should == 'a'
       struct.b.should == 1
       struct.c.a.should == 1
@@ -189,7 +189,7 @@ class Rubytter
         {"status" => {"text" => "foo", "user" => {"screen_name" => "jugyo_foo"}}},
         {"status" => {"text" => "bar", "user" => {"screen_name" => "jugyo_bar"}}},
       ]
-      struct = @rubytter.structize(data)
+      struct = Rubytter.structize(data)
       struct[0].status.text.should == 'foo'
       struct[0].status.user.screen_name.should == 'jugyo_foo'
       struct[1].status.text.should == 'bar'
@@ -207,7 +207,7 @@ class Rubytter
         :d => {:a => {:a => 1, :b => 2}, :b => 1},
         :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
       }
-      struct = @rubytter.structize(hash)
+      struct = Rubytter.structize(hash)
       struct.to_hash.should == {
         :a => "a",
         :b => 1,
@@ -219,7 +219,7 @@ class Rubytter
 
     it 'should convert struct to symbolized hash' do
       hash = {'e' => [{'a' => 1, 'b' => 2}, {'c' => 'd'}]}
-      struct = @rubytter.structize(hash)
+      struct = Rubytter.structize(hash)
       struct.should == {:e => [{:a => 1, :b => 2}, {:c => 'd'}]}
     end
 
@@ -228,14 +228,14 @@ class Rubytter
       hash = {
         :e => [{:a => 1, :b => 2}, {:c => '&quot;&lt;&gt;&amp;'}]
       }
-      struct = @rubytter.structize(hash)
+      struct = Rubytter.structize(hash)
       struct.should == {:e=>[{:a=>1, :b=>2}, {:c=>'"<>&'}]}
     end
 
     it 'should create same structs from same datas' do
-      @rubytter.structize({:a => 'a'}).should == @rubytter.structize({:a => 'a'})
-      @rubytter.structize({:a => 'a', :b => {:c => 'c'}}).should ==
-        @rubytter.structize({:a => 'a', :b => {:c => 'c'}})
+      Rubytter.structize({:a => 'a'}).should == Rubytter.structize({:a => 'a'})
+      Rubytter.structize({:a => 'a', :b => {:c => 'c'}}).should ==
+        Rubytter.structize({:a => 'a', :b => {:c => 'c'}})
     end
 
     it 'should be set app_name' do

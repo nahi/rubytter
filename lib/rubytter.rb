@@ -28,13 +28,12 @@ class Rubytter
 
   # Former API: initialize(login = nil, password = nil, options = {})
   # Prefer API: initialize(config = {}, options = {})
-  def initialize(user_name = nil, password_or_options = nil, options = {})
-    if user_name.is_a?(Hash)
-      config = user_name
+  def initialize(config = nil, password_or_options = nil, options = {})
+    if config.is_a?(Hash)
       options = password_or_options || {}
     else
       config = {
-        :user_name => user_name,
+        :user_name => config,
         :password => password_or_options
       }
     end
@@ -181,20 +180,20 @@ class Rubytter
   def get(path, params = {})
     path += '.json'
     res = @connection.get(path, params, @header)
-    structize(parse_response(res))
+    Rubytter.structize(parse_response(res))
   end
 
   def post(path, params = {})
     path += '.json'
     res = @connection.post(path, params, @header)
-    structize(parse_response(res))
+    Rubytter.structize(parse_response(res))
   end
 
   # ignore params. DELETE with params?
   def delete(path, params = {})
     path += '.json'
     res = @connection.delete(path, @header)
-    structize(parse_response(res))
+    Rubytter.structize(parse_response(res))
   end
 
   def search(query, params = {})
@@ -203,7 +202,7 @@ class Rubytter
     res = @connection.get(path, params, @header, :host => "search.twitter.com", :non_ssl => true)
     json_data = parse_response(res)
     return {} unless json_data['results']
-    structize(json_data['results'].map { |result| search_result_to_hash(result) })
+    Rubytter.structize(json_data['results'].map { |result| search_result_to_hash(result) })
   end
 
   def search_user(query, params = {})
@@ -211,7 +210,7 @@ class Rubytter
     params = params.merge(:q => query)
     res = @connection.get(path, params, @header, :host => "api.twitter.com")
     @connection.client.debug_dev = nil
-    structize(parse_response(res))
+    Rubytter.structize(parse_response(res))
   end
 
   def search_result_to_hash(json)
@@ -242,7 +241,7 @@ class Rubytter
     end
   end
 
-  def structize(data)
+  def self.structize(data)
     case data
     when Array
       data.map{|i| structize(i)}
