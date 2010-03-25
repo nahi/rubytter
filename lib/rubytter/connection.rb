@@ -17,6 +17,18 @@ class Rubytter
       @client = setup_client(options)
     end
 
+    def get(path, query, extheader, opt = {})
+      request(:get, path, query, nil, extheader, opt)
+    end
+
+    def post(path, body, extheader, opt = {})
+      request(:post, path, nil, body, extheader, opt)
+    end
+
+    def delete(path, extheader, opt = {})
+      request(:delete, path, nil, nil, extheader, opt)
+    end
+
     def request(method, path, query, body, extheader, opt = {})
       path = '/' + path unless path[0] == ?/
       uri = create_uri(path, opt)
@@ -54,6 +66,7 @@ class Rubytter
         client.set_auth(uri, options[:login], options[:password])
       end
       client.debug_dev = Logger.new(options[:wiredump]) if options[:wiredump]
+      client.cookie_manager = nil
       client
     end
 

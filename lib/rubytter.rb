@@ -25,11 +25,22 @@ class Rubytter
   attr_accessor :host, :header
   attr_reader :connection
 
-  def initialize(login = nil, password = nil, options = {})
-    @login = login
-    @host = 'twitter.com'
+  # Former API: initialize(login = nil, password = nil, options = {})
+  # Prefer API: initialize(config = {}, options = {})
+  def initialize(login = nil, password_or_options = nil, options = {})
+    if login.is_a?(Hash)
+      config = login
+      options = password_or_options || {}
+    else
+      config = {
+        :user_name => login,
+        :password => password_or_options
+      }
+    end
+    @login = config[:user_name]
+    @host = 'api.twitter.com'
     @header = {}
-    setup(options.merge(:login => login, :password => password))
+    setup(options.merge(:login => @login, :password => config[:password]))
   end
 
   def setup(options)
@@ -168,27 +179,27 @@ class Rubytter
 
   def get(path, params = {})
     path += '.json'
-    res = @connection.request(:get, path, params, nil, @header)
+    res = @connection.get(path, params, @header)
     structize(parse_response(res))
   end
 
   def post(path, params = {})
     path += '.json'
-    res = @connection.request(:post, path, nil, params, @header)
+    res = @connection.post(path, params, @header)
     structize(parse_response(res))
   end
 
   # ignore params. DELETE with params?
   def delete(path, params = {})
     path += '.json'
-    res = @connection.request(:delete, path, nil, nil, @header)
+    res = @connection.delete(path, @header)
     structize(parse_response(res))
   end
 
   def search(query, params = {})
     path = '/search.json'
     params = params.merge(:q => query)
-    res = @connection.request(:get, path, params, nil, @header, :host => "search.twitter.com", :non_ssl => true)
+    res = @connection.get(path, params, @header, :host => "search.twitter.com", :non_ssl => true)
     json_data = parse_response(res)
     return {} unless json_data['results']
     structize(json_data['results'].map { |result| search_result_to_hash(result) })
@@ -197,7 +208,7 @@ class Rubytter
   def search_user(query, params = {})
     path = '/1/users/search.json'
     params = params.merge(:q => query)
-    res = @connection.request(:get, path, params, nil, @header, :host => "api.twitter.com")
+    res = @connection.get(path, params, @header, :host => "api.twitter.com")
     @connection.client.debug_dev = nil
     structize(parse_response(res))
   end
