@@ -52,6 +52,10 @@ class OAuthRubytter < Rubytter
     @connection.client.www_auth.oauth.challenge(site)
   end
 
+  def verify_credentials
+    # nothing to do more for OAuth.
+  end
+
 private
 
   def get_attr(obj, key)

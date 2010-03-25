@@ -41,6 +41,11 @@ class OAuthRubytter
       rubytter.friends_timeline(:page => 2)
     end
 
+    it 'should ignore verify_credentials' do
+      rubytter = OAuthRubytter.new
+      rubytter.verify_credentials.should == nil
+    end
+
     def simple_mock(options)
       o = Object.new
       options.each do |k, v|
