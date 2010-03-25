@@ -58,12 +58,12 @@ class Rubytter
       client = HTTPClient.new
       client.agent_name = options[:agent_name] if options[:agent_name]
       client.proxy = build_proxy_uri(options)
-      if options[:login] and options[:password]
+      if options[:user_name] and options[:password]
         uri = @uri.dup
-        client.set_auth(uri, options[:login], options[:password])
+        client.set_auth(uri, options[:user_name], options[:password])
         # uglish but we want to restrict domain to twitter.com and api.twitter.com
         uri.host = 'api.twitter.com'
-        client.set_auth(uri, options[:login], options[:password])
+        client.set_auth(uri, options[:user_name], options[:password])
       end
       client.debug_dev = Logger.new(options[:wiredump]) if options[:wiredump]
       client.cookie_manager = nil

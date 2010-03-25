@@ -21,31 +21,32 @@ class Rubytter
     end
   end
 
-  attr_reader :login
+  attr_reader :user_name
+  alias login user_name
   attr_accessor :host, :header
   attr_reader :connection
 
   # Former API: initialize(login = nil, password = nil, options = {})
   # Prefer API: initialize(config = {}, options = {})
-  def initialize(login = nil, password_or_options = nil, options = {})
-    if login.is_a?(Hash)
-      config = login
+  def initialize(user_name = nil, password_or_options = nil, options = {})
+    if user_name.is_a?(Hash)
+      config = user_name
       options = password_or_options || {}
     else
       config = {
-        :user_name => login,
+        :user_name => user_name,
         :password => password_or_options
       }
     end
-    @login = config[:user_name]
+    @user_name = config[:user_name]
     @host = 'api.twitter.com'
     @header = {}
-    setup(options.merge(:login => @login, :password => config[:password]))
+    setup(options.merge(:user_name => @user_name, :password => config[:password]))
   end
 
   def setup(options)
     options = options.dup
-    @login = options[:login] if options[:login]
+    @user_name = options[:user_name] if options[:user_name]
     @host = options[:host] if options[:host]
     @header.merge!(options[:header]) if options[:header]
     @app_name = options[:app_name]
@@ -125,7 +126,7 @@ class Rubytter
     if /%s/ =~ path
       eval <<-EOS
         def #{method}(*args)
-          path = login ? '#{path}'.gsub(':user', login) :'#{path}'
+          path = user_name ? '#{path}'.gsub(':user', user_name) :'#{path}'
           params = args.last.kind_of?(Hash) ? args.pop : {}
           path = path % args
           path.sub!(/\\/\\z/, '')
@@ -135,7 +136,7 @@ class Rubytter
     else
       eval <<-EOS
         def #{method}(params = {})
-          path = login ? '#{path}'.gsub(':user', login) :'#{path}'
+          path = user_name ? '#{path}'.gsub(':user', user_name) :'#{path}'
           #{http_method}(path, params)
         end
       EOS

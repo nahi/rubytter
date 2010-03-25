@@ -23,11 +23,19 @@ class OAuthRubytter < Rubytter
     options = set_default_option(options, :host, URI.parse(OAUTH_SITE).host)
     options = set_default_option(options, :enable_ssl, false)
     super(config, options)
-    token = get_attr(config, :token)
-    secret = get_attr(config, :secret)
     consumer = get_attr(config, :consumer)
     consumer_key = get_attr(consumer, :key)
     consumer_secret = get_attr(consumer, :secret)
+    token = get_attr(config, :token)
+    secret = get_attr(config, :secret)
+    user_name = get_attr(config, :user_name) # for xAuth
+    password = get_attr(config, :password) # for xAuth
+
+    # xAuth support
+    if token.nil? and secret.nil? and user_name and password
+      ac = OAuth.new(consumer_key, consumer_secret).get_access_token_with_xauth(user_name, password)
+      token, secret = ac.token, ac.secret
+    end
 
     # configure
     config = HTTPClient::OAuth::Config.new
@@ -38,8 +46,10 @@ class OAuthRubytter < Rubytter
     config.signature_method = OAUTH_SIGNATURE_METHOD
     config.http_method = :get
 
-    @connection.client.www_auth.oauth.set_config(OAUTH_SITE, config)
-    @connection.client.www_auth.oauth.challenge(OAUTH_SITE)
+    site = OAUTH_SITE
+    site.sub!(/\Ahttp/, 'https') if options[:enable_ssl]
+    @connection.client.www_auth.oauth.set_config(site, config)
+    @connection.client.www_auth.oauth.challenge(site)
   end
 
 private
@@ -49,6 +59,8 @@ private
       obj.send(key)
     elsif obj.respond_to?(:[])
       obj[key]
+    else
+      nil
     end
   end
 

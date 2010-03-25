@@ -47,13 +47,13 @@ class Rubytter
       Token.new(res.oauth_params)
     end
 
-    def get_access_token_with_xauth(login, password)
+    def get_access_token_with_xauth(user_name, password)
       config = consumer.oauth_config
       config.token = ''
       config.secret = ''
       xauth_params = {
         :x_auth_mode => "client_auth",
-        :x_auth_username => login,
+        :x_auth_username => user_name,
         :x_auth_password => password
       }
       res = consumer.get(ACCESS_TOKEN_URL, xauth_params)
