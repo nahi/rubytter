@@ -87,7 +87,7 @@ class Rubytter
     end
 
     def unescape(escaped)
-      escaped ? ::HTTPClient::HTTP::Message.unescape(escaped) : nil
+      escaped ? ::HTTP::Message.unescape(escaped) : nil
     end
   end
 end
