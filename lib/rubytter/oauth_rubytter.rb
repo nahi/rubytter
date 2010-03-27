@@ -14,6 +14,12 @@ class OAuthRubytter < Rubytter
   #   :secret => secret,
   #   :consumer => { :key => consumer_key, :secret => consumer_secret }
   # }
+  #   or
+  # {
+  #   :user_name => 'user_name',
+  #   :password => 'password',
+  #   :consumer => { :key => consumer_key, :secret => consumer_secret }
+  # } for xAuth.
   #
   # options hash:
   #   :host => host string. follows OAUTH_SITE by default.
