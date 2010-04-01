@@ -65,7 +65,7 @@ class OAuthRubytter < Rubytter
 private
 
   def get_attr(obj, key)
-    if obj.respond_to?(key)
+    if obj.respond_to?(key) and obj.method(:key).arity <= 0
       obj.send(key)
     elsif obj.respond_to?(:[])
       obj[key]
