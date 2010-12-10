@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 require 'httpclient'
+require 'stringio'
+require 'zlib'
 
 class Rubytter
   class Connection
@@ -30,9 +32,16 @@ class Rubytter
     end
 
     def request(method, path, query, body, extheader, opt = {})
+      extheader['Accept-Encoding'] = 'gzip'
       path = '/' + path unless path[0] == ?/
       uri = create_uri(path, opt)
-      @client.request(method, uri, query, body, extheader)
+      res = @client.request(method, uri, query, body, extheader)
+      enc = res.header['content-encoding']
+      if enc and enc[0] and enc[0].downcase == 'gzip'
+        c = Zlib::GzipReader.wrap(StringIO.new(res.content)) { |gz| gz.read }
+        res.body.init_response(c)
+      end
+      res
     end
     
   private
